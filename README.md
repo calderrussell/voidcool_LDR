@@ -31,7 +31,8 @@ GitHub-to-Vercel workflow.
    - Install command: `npm install`
    - Build command: `npm run build`
    - Output directory: leave blank
-4. Deploy.
+4. Add the contact form environment variables listed below.
+5. Deploy.
 
 ## Main Files
 
@@ -42,6 +43,17 @@ GitHub-to-Vercel workflow.
 
 ## Contact Form
 
-The current form validates in the browser and shows a local success message.
-To receive submissions, connect the form to a service such as Formspree,
-Resend, HubSpot, or a custom Next.js API route.
+The contact form posts to `app/api/contact/route.ts` and sends submissions to
+`calderr@mit.edu` through Resend.
+
+Create a Resend account, verify a sending domain or sender address, then set
+these variables in Vercel:
+
+```bash
+RESEND_API_KEY=your_resend_api_key
+CONTACT_TO_EMAIL=calderr@mit.edu
+CONTACT_FROM_EMAIL=VoidCool <your_verified_sender@yourdomain.com>
+```
+
+For local testing, copy `.env.example` to `.env.local` and fill in the same
+values. Real `.env*` files are ignored by git so secrets do not get committed.

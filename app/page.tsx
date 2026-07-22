@@ -48,14 +48,49 @@ const droplets = Array.from({ length: 54 }, (_, index) => {
 
 export default function Home() {
   const [status, setStatus] = useState("Ready to route mission inquiries.");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const name = data.get("name")?.toString().trim() || "there";
-    setStatus(`Thanks, ${name}. Your request is ready to connect to an inbox or form endpoint.`);
-    form.reset();
+    const payload = {
+      name: data.get("name")?.toString().trim() ?? "",
+      email: data.get("email")?.toString().trim() ?? "",
+      company: data.get("company")?.toString().trim() ?? "",
+      interest: data.get("interest")?.toString().trim() ?? "",
+      message: data.get("message")?.toString().trim() ?? "",
+    };
+
+    setIsSubmitting(true);
+    setStatus("Sending your inquiry...");
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to send inquiry.");
+      }
+
+      setStatus(`Thanks, ${payload.name || "there"}. Your inquiry was sent to Calder.`);
+      form.reset();
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Unable to send inquiry. Please email calderr@mit.edu directly.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -197,7 +232,7 @@ export default function Home() {
           <p className="eyebrow">Contact</p>
           <h2>Help us design the heat rejection layer for serious space power.</h2>
           <p>Reach out for investor conversations, spacecraft integration discussions, advisor roles, manufacturing partnerships, or early technical feedback.</p>
-          <div className="contact-routing"><span>Mission inquiries</span><strong>briefings@voidcool.space</strong></div>
+          <div className="contact-routing"><span>Mission inquiries</span><strong>calderr@mit.edu</strong></div>
         </div>
         <form className="contact-form" onSubmit={handleSubmit}>
           <label>Name<input name="name" type="text" placeholder="Your name" required /></label>
@@ -205,7 +240,9 @@ export default function Home() {
           <label>Company<input name="company" type="text" placeholder="Company or lab" /></label>
           <label>Interest<select name="interest" defaultValue="Technical brief"><option>Technical brief</option><option>Investor conversation</option><option>Spacecraft integration</option><option>Manufacturing partnership</option><option>Joining the team</option></select></label>
           <label className="full">Message<textarea name="message" placeholder="Tell us what you are building and the thermal challenge you are solving." rows={5} /></label>
-          <button className="button button-primary" type="submit">Send inquiry</button>
+          <button className="button button-primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Sending..." : "Send inquiry"}
+          </button>
           <p className="form-status" aria-live="polite">{status}</p>
         </form>
       </section>
