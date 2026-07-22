@@ -53,7 +53,13 @@ these variables in Vercel:
 RESEND_API_KEY=your_resend_api_key
 CONTACT_TO_EMAIL=calderr@mit.edu
 CONTACT_FROM_EMAIL=VoidCool <your_verified_sender@yourdomain.com>
+CONTACT_DEBUG_ERRORS=false
 ```
 
 For local testing, copy `.env.example` to `.env.local` and fill in the same
 values. Real `.env*` files are ignored by git so secrets do not get committed.
+
+If email delivery fails while configuring Resend, temporarily set
+`CONTACT_DEBUG_ERRORS=true` in Vercel and redeploy. The form will show Resend's
+non-secret rejection reason, such as an unverified sending domain or invalid
+API key. Set it back to `false` after diagnosis.

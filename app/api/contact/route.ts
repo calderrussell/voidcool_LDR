@@ -11,6 +11,7 @@ type ContactPayload = {
 const toEmail = process.env.CONTACT_TO_EMAIL ?? "calderr@mit.edu";
 const fromEmail = process.env.CONTACT_FROM_EMAIL;
 const resendApiKey = process.env.RESEND_API_KEY;
+const showDebugErrors = process.env.CONTACT_DEBUG_ERRORS === "true";
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim().slice(0, 2000) : "";
@@ -18,6 +19,33 @@ function clean(value: unknown) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function readProviderError(response: Response) {
+  const fallback = `Resend rejected the email with status ${response.status}.`;
+
+  try {
+    const body = (await response.json()) as {
+      error?: { message?: string; code?: string };
+      message?: string;
+      name?: string;
+    };
+    return body.error?.message ?? body.message ?? body.name ?? fallback;
+  } catch {
+    try {
+      return (await response.text()) || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+}
+
+function publicError(detail?: string) {
+  if (showDebugErrors && detail) {
+    return `Email provider error: ${detail}`;
+  }
+
+  return "The inquiry could not be sent. Please email calderr@mit.edu directly.";
 }
 
 export async function POST(request: Request) {
@@ -84,22 +112,22 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Contact form email network error", error);
     return NextResponse.json(
-      { error: "The inquiry could not be sent. Please email calderr@mit.edu directly." },
+      { error: publicError("Network error while contacting Resend.") },
       { status: 502 },
     );
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const providerError = await readProviderError(response);
     console.error("Resend rejected contact form email", {
       status: response.status,
-      response: errorText,
+      response: providerError,
       fromEmail,
       toEmail,
     });
 
     return NextResponse.json(
-      { error: "The inquiry could not be sent. Please email calderr@mit.edu directly." },
+      { error: publicError(providerError) },
       { status: 502 },
     );
   }
