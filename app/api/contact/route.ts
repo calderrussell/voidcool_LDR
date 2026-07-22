@@ -64,22 +64,40 @@ export async function POST(request: Request) {
     message || "Not provided",
   ].join("\n");
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [toEmail],
-      reply_to: email,
-      subject: `VoidCool inquiry from ${name}`,
-      text,
-    }),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [toEmail],
+        reply_to: email,
+        subject: `VoidCool inquiry from ${name}`,
+        text,
+      }),
+    });
+  } catch (error) {
+    console.error("Contact form email network error", error);
+    return NextResponse.json(
+      { error: "The inquiry could not be sent. Please email calderr@mit.edu directly." },
+      { status: 502 },
+    );
+  }
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Resend rejected contact form email", {
+      status: response.status,
+      response: errorText,
+      fromEmail,
+      toEmail,
+    });
+
     return NextResponse.json(
       { error: "The inquiry could not be sent. Please email calderr@mit.edu directly." },
       { status: 502 },
